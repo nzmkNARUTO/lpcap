@@ -30,7 +30,7 @@ PNode SListFind(SList* s, PNode data) {
     assert(s);
     PNode pCur = s->_pHead;
     while (pCur) {
-        if (pCur->_data == data) {
+        if (pCur->_data == data) {//TODO: 设计过滤器，bpf或自定义，已有的较好的成果有bcc，https://github.com/iovisor/bcc
             return pCur;
         }
         pCur = pCur->_PNext;
