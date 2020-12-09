@@ -1,2 +1,2 @@
-# lpcap
-My version of lpcap
+# mySniffer
+My version of network sniffer
