@@ -1,12 +1,12 @@
-app:app.c app.h pcap ppro pcot util
-	@gcc -o pcap app.c util.o -L./lib -lpcap -lppro -lpcot -lncurses
-pcap:pcap.c pcap.h
-	@gcc -c pcap.c -shared -fPIC -o ./lib/libpcap.so
-ppro:ppro.c ppro.h
-	@gcc -c ppro.c -shared -fPIC -o ./lib/libppro.so
-pcot:pcot.c pcot.h
-	@gcc -c pcot.c -shared -fPIC -o ./lib/libpcot.so
+app:app.c app.h util capture analysis statistic
+	@gcc -o sniffer app.c util.o capture.o analysis.o statistic.o -lncurses -lpcap
+capture:capture.c capture.h
+	@gcc -c capture.c -o capture.o
+analysis:analysis.c analysis.h
+	@gcc -c analysis.c -o analysis.o
+statistic:statistic.c statistic.h
+	@gcc -c statistic.c -o statistic.o
 util:util.c util.h
 	@gcc -c util.c -o util.o
 clean:
-	@-rm ./lib/* pcap util.o
+	@-rm ./*.o sniffer

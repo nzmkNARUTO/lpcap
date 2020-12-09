@@ -1,4 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <pcap.h>
 
-#include "pcap.h"
+pcap_if_t* getDevices();
