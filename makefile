@@ -8,5 +8,7 @@ statistic:statistic.c statistic.h
 	@gcc -c statistic.c -o statistic.o
 util:util.c util.h
 	@gcc -c util.c -o util.o
-clean:
+clean:temp
 	@-rm ./*.o sniffer
+temp:
+	@-rm -f temp.pcap

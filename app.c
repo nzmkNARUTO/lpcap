@@ -3,11 +3,13 @@
 #include <ncurses.h>
 #include <termios.h>
 #include <unistd.h>
+#include <time.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 
 #include "app.h"
 #include "capture.h"
+#include "analysis.h"
 
 int main(){
     /*
@@ -34,6 +36,9 @@ int main(){
         printf("%s\n",p->name);
         p = p->next;
     }
-    capturePacket("any");
+    struct pcap_pkthdr pkthdr;
+    u_char *packet = capturePacket("ens33", &pkthdr);
+    packetProcess(&pkthdr, packet, 1);
+    printf("\n");
     return 0;
 }

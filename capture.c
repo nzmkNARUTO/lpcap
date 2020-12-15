@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pcap.h>
+#include <time.h>
+#include <string.h>
 #include <ncurses.h>
 
 #include "capture.h"
@@ -17,23 +19,37 @@ pcap_if_t* getDevices(){
     return devices;
 }
 
-void capturePacket(pcap_if_t *device_name){
+u_char* capturePacket(pcap_if_t *device_name, struct pcap_pkthdr *pkthdr){
     char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_t *device = pcap_open_live(device_name, MAXSIZE, 1, 0, errbuf);
+    pcap_t *device = pcap_open_live(device_name, MAXSIZE, 1, 100, errbuf);
     if(!device){
         //log("Error:pcap_open_live error");
         //log(errbuf);
         printf("Error:pcap_open_live error, %s", errbuf);
         exit(1);
     }
-    pcap_dumper_t *out;
-    out = pcap_dump_open(device, "/tmp/pcap/temp.pcap");
+
+    u_char *packet;
+    packet = pcap_next(device, pkthdr);
+    u_char *output = (u_char*)malloc(pkthdr->len);
+    memcpy(output, packet, pkthdr->len);
+
+    if (!packet)
+    {
+        printf("did not capture a packet!\n");
+        exit(1);
+    }
+
+    pcap_dumper_t *out = pcap_dump_open_append(device, "./temp.pcap");
     if(!out) {
         printf("Error on opening output file\n");
-        exit(-1);
+        exit(1);
     }
-    pcap_loop(device, 10, packetProcess, (u_char *)out);
+
+    pcap_dump((u_char*)out, pkthdr, packet);
     pcap_dump_flush(out);
     pcap_dump_close(out);
     pcap_close(device);
+
+    return output;
 }

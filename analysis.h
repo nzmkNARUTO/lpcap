@@ -1,3 +1,3 @@
 #include <pcap.h>
 
-void packetProcess(u_char * userarg, const struct pcap_pkthdr * pkthdr, const u_char * packet);
+void packetProcess(struct pcap_pkthdr* pkthdr, u_char* packet, int count);
