@@ -39,10 +39,17 @@ int main(){
     printf("Please choice a device:\n");
     int c;
     scanf("%d", &c);
+    printf("----------------------------------------------------------\n");
     for(; c>0; c--)
         devices = devices->next;
+    pcap_t *device = openDevice(devices->name);
     struct pcap_pkthdr pkthdr;
-    u_char *packet = capturePacket(devices->name, &pkthdr, "ip");
-    packetProcess(&pkthdr, packet, 1);
+    for(int i=1;i<=100;i++){
+        u_char *packet = capturePacket(device, &pkthdr, "ip");
+        packetProcess(&pkthdr, packet, i);
+        printf("----------------------------------------------------------\n");
+        printf("%d\n",i);
+    }
+    pcap_close(device);
     return 0;
 }

@@ -15,4 +15,6 @@ pcap_if_t* getDevices();
  * @param filter filter string
  * @return u_char* packet connent
  */
-u_char* capturePacket(pcap_if_t *device_name, struct pcap_pkthdr *pkthdr, char* filter);
+u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr, char* filter);
+
+pcap_t* openDevice(pcap_if_t *device_name);

@@ -19,14 +19,17 @@ pcap_if_t* getDevices(){
     return devices;
 }
 
-u_char* capturePacket(pcap_if_t *device_name, struct pcap_pkthdr *pkthdr, char* filter){
+pcap_t* openDevice(pcap_if_t *device_name){
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t *device = pcap_open_live(device_name, MAXSIZE, 1, 100, errbuf);
     if(!device){
         printf("Error:pcap_open_live error, %s", errbuf);
         exit(1);
     }
+    return device;
+}
 
+u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr, char* filter){
     struct bpf_program bpf;
     pcap_compile(device, &bpf, filter, 1, 0);
     pcap_setfilter(device, &bpf);
@@ -51,7 +54,7 @@ u_char* capturePacket(pcap_if_t *device_name, struct pcap_pkthdr *pkthdr, char* 
     pcap_dump((u_char*)out, pkthdr, packet);
     pcap_dump_flush(out);
     pcap_dump_close(out);
-    pcap_close(device);
+
 
     return output;
 }
