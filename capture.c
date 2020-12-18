@@ -19,15 +19,17 @@ pcap_if_t* getDevices(){
     return devices;
 }
 
-u_char* capturePacket(pcap_if_t *device_name, struct pcap_pkthdr *pkthdr){
+u_char* capturePacket(pcap_if_t *device_name, struct pcap_pkthdr *pkthdr, char* filter){
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t *device = pcap_open_live(device_name, MAXSIZE, 1, 100, errbuf);
     if(!device){
-        //log("Error:pcap_open_live error");
-        //log(errbuf);
         printf("Error:pcap_open_live error, %s", errbuf);
         exit(1);
     }
+
+    struct bpf_program bpf;
+    pcap_compile(device, &bpf, filter, 1, 0);
+    pcap_setfilter(device, &bpf);
 
     u_char *packet;
     packet = pcap_next(device, pkthdr);

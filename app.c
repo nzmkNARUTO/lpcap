@@ -32,13 +32,17 @@ int main(){
     */
     pcap_if_t *devices = getDevices();
     pcap_if_t *p = devices;
-    while(p){
-        printf("%s\n",p->name);
+    for(int i = 0; p; i++){
+        printf("[%d] %s\n", i, p->name);
         p = p->next;
     }
+    printf("Please choice a device:\n");
+    int c;
+    scanf("%d", &c);
+    for(; c>0; c--)
+        devices = devices->next;
     struct pcap_pkthdr pkthdr;
-    u_char *packet = capturePacket("ens33", &pkthdr);
+    u_char *packet = capturePacket(devices->name, &pkthdr, "ip");
     packetProcess(&pkthdr, packet, 1);
-    printf("\n");
     return 0;
 }
