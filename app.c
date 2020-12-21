@@ -10,6 +10,7 @@
 #include "app.h"
 #include "capture.h"
 #include "analysis.h"
+#include "statistic.h"
 
 int main(){
     /*
@@ -42,14 +43,17 @@ int main(){
     printf("----------------------------------------------------------\n");
     for(; c>0; c--)
         devices = devices->next;
+    setTime();
     pcap_t *device = openDevice(devices->name);
     struct pcap_pkthdr pkthdr;
-    for(int i=1;i<=100;i++){
-        u_char *packet = capturePacket(device, &pkthdr, "ip");
+    for(int i=1;i<=10;i++){
+        u_char *packet = capturePacket(device, &pkthdr, "");
         packetProcess(&pkthdr, packet, i);
         printf("----------------------------------------------------------\n");
         printf("%d\n",i);
     }
     pcap_close(device);
+    setTime();
+    showInfo();
     return 0;
 }

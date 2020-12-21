@@ -14,8 +14,10 @@
 #include <arpa/inet.h>
 
 #include "analysis.h"
+#include "statistic.h"
 
 void packetProcess(struct pcap_pkthdr* pkthdr, u_char* packet, int count){
+
     printf("count:%d\n",count);
     printf("Packet len:%d, Bytes:%d, Received time:%s", pkthdr->len, pkthdr->caplen, ctime((const time_t *)&pkthdr->ts.tv_sec));
     u_short type = printEthernet(packet);
@@ -23,10 +25,12 @@ void packetProcess(struct pcap_pkthdr* pkthdr, u_char* packet, int count){
     {
     case ETHERTYPE_IP:
         printf("Ethernet protocol is IP protocol\n");
+        newPacket(pkthdr->caplen, 1);
         uint8_t ip_type = printIP(packet);
         switch(ip_type){
             case 1:
                 printf("Transport protocol is ICMP protocol\n");
+                newPacket(pkthdr->caplen, 2);
                 printICMP(packet, pkthdr->len);
                 break;
             case 6:
@@ -52,6 +56,7 @@ void packetProcess(struct pcap_pkthdr* pkthdr, u_char* packet, int count){
         break;
     default:
         printf("Unkown protocol\n");
+        newPacket(pkthdr->caplen, 3);
         break;
     }
 }
