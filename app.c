@@ -27,7 +27,7 @@ int main(){
     wrefresh(main_window);
     refresh();
     #endif
-
+    /*
     pcap_if_t *devices = getDevices();
     pcap_if_t *p = devices;
     int device_count = 0;
@@ -36,6 +36,7 @@ int main(){
         p = p->next;
         device_count++;
     }
+    */
 
     #ifdef WIN
         WINDOW* interactor;
@@ -53,25 +54,28 @@ int main(){
         getch();
     #endif
 
-
+    /*
     printf("Please choice a device:\n");
     int c;
     scanf("%d", &c);
     printf("----------------------------------------------------------\n");
     for(; c>0; c--)
         devices = devices->next;
+    */
     setTime();
-    pcap_t *device = openDevice(devices->name);
+    //pcap_t *device = openDevice(devices->name);
+    pcap_t *device = openDeviceOffline("temp.pcap");
     struct pcap_pkthdr pkthdr;
     NList packets;
     init(&packets);
     for(int i=1;i<=100;i++){
-        u_char *packet = capturePacket(device, &pkthdr, "");
-        add(&packets, i, &pkthdr, packet);
-        packetProcess(&pkthdr, packet, i);
-        printf("----------------------------------------------------------\n");
+        u_char *packet = capturePacket(device, &pkthdr, "tcp");
+        printf("%d\n",i);
+        //add(&packets, i, &pkthdr, packet);
+        //packetProcess(&pkthdr, packet, i);
+        //printf("----------------------------------------------------------\n");
     }
-    savePacket(device, &packets);
+    //savePacket(device, &packets);
     pcap_close(device);
     setTime();
     showInfo();

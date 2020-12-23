@@ -28,6 +28,16 @@ pcap_t* openDevice(pcap_if_t *device_name){
     return device;
 }
 
+pcap_t *openDeviceOffline(char *file){
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_t *device = pcap_open_offline(file, errbuf);
+    if(!device){
+        printf("Error:pcap_open_live error, %s", errbuf);
+        exit(1);
+    }
+    return device;
+}
+
 u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr, char* filter){
     struct bpf_program bpf;
     pcap_compile(device, &bpf, filter, 1, 0);
@@ -36,11 +46,12 @@ u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr, char* filter){
     u_char *packet;
     packet = pcap_next(device, pkthdr);
     u_char *output = (u_char*)malloc(pkthdr->len);
+    printf("ok %d\n", pkthdr->caplen);
     memcpy(output, packet, pkthdr->len);
 
     if (!packet)
     {
-        printf("did not capture a packet!\n");
+        perror("did not capture a packet!\n");
         exit(1);
     }
 
