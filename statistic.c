@@ -32,6 +32,8 @@ void newPacket(int length, int type){
     }else if(type == 2){
         icmp_packet++;
         icmp_length+=length;
+        packet_count++;
+        packet_length+=length;
     }else{
         unknow_packet++;
         unknow_length+=length;

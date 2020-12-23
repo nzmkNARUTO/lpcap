@@ -7,7 +7,6 @@
 
 #include "capture.h"
 #include "analysis.h"
-#include "util.h"
 
 pcap_if_t* getDevices(){
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -45,16 +44,20 @@ u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr, char* filter){
         exit(1);
     }
 
+    return output;
+}
+
+void savePacket(pcap_t *device, NList *n){
     pcap_dumper_t *out = pcap_dump_open_append(device, "./temp.pcap");
     if(!out) {
         printf("Error on opening output file\n");
         exit(1);
     }
-
-    pcap_dump((u_char*)out, pkthdr, packet);
+    pNode temp = n->_pHead;
+    while(temp){
+        pcap_dump((u_char*)out, &temp->pkthdr, temp->packet);
+        temp = temp->next;
+    }
     pcap_dump_flush(out);
     pcap_dump_close(out);
-
-
-    return output;
 }

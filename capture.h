@@ -1,4 +1,5 @@
 #define MAXSIZE 65535
+#include "util.h"
 
 /**
  * @brief Get the Devices object
@@ -18,3 +19,5 @@ pcap_if_t* getDevices();
 u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr, char* filter);
 
 pcap_t* openDevice(pcap_if_t *device_name);
+
+void savePacket(pcap_t *device, NList* n);

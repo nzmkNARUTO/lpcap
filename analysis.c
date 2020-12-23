@@ -25,7 +25,6 @@ void packetProcess(struct pcap_pkthdr* pkthdr, u_char* packet, int count){
     {
     case ETHERTYPE_IP:
         printf("Ethernet protocol is IP protocol\n");
-        newPacket(pkthdr->caplen, 1);
         uint8_t ip_type = printIP(packet);
         switch(ip_type){
             case 1:
@@ -35,23 +34,28 @@ void packetProcess(struct pcap_pkthdr* pkthdr, u_char* packet, int count){
                 break;
             case 6:
                 printf("Transport protocol is TCP protocol\n");
+                newPacket(pkthdr->caplen, 1);
                 printTCP(packet, pkthdr->len);
                 break;
             case 17:
                 printf("Transport protocol is UDP protocol\n");
+                newPacket(pkthdr->caplen, 1);
                 printUDP(packet, pkthdr->len);
                 break;
             default:
+                newPacket(pkthdr->caplen, 1);
                 printf("Known protocol\n");
                 break;
         }
         break;
     case ETHERTYPE_ARP:
         printf("Ethernet protocol is ARP protocol\n");
+        newPacket(pkthdr->caplen, 3);
         printARP(packet, pkthdr->len);
         break;
     case ETHERTYPE_REVARP:
         printf("Ethernet protocol is RARP protocol\n");
+        newPacket(pkthdr->caplen, 3);
         printARP(packet, pkthdr->len);
         break;
     default:
