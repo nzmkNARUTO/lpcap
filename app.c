@@ -12,9 +12,11 @@
 #include "analysis.h"
 #include "statistic.h"
 
+//#define WIN
+
 int main(){
-    /*
-    struct winsize size;
+    #ifdef WIN
+    struct winsize size;//get windows size
     ioctl(STDIN_FILENO,TIOCGWINSZ,&size);
     initscr();
     box(stdscr, ACS_VLINE,ACS_HLINE);
@@ -23,20 +25,35 @@ int main(){
     main_window = newwin(size.ws_row-2, size.ws_col-2, 1, 1);
     box(main_window, ACS_VLINE, ACS_HLINE);
     wrefresh(main_window);
-    WINDOW* interactor;
-    interactor = derwin(stdscr, 5, 10, 1, 1);
-    box(interactor, ACS_VLINE, ACS_HLINE);
-    wrefresh(interactor);
     refresh();
-    getch();
-    endwin();
-    */
+    #endif
+
     pcap_if_t *devices = getDevices();
     pcap_if_t *p = devices;
+    int device_count = 0;
     for(int i = 0; p; i++){
         printf("[%d] %s\n", i, p->name);
         p = p->next;
+        device_count++;
     }
+
+    #ifdef WIN
+        WINDOW* interactor;
+        interactor = derwin(main_window, device_count+2, 30, 1, 1);
+        box(interactor, ACS_VLINE, ACS_HLINE);
+        p = devices;
+        for(int i = 0; p; i++){
+            mvwprintw(interactor, i+1, 1, "[%d]%s", i, p->name);
+            p=p->next;
+        }
+        wrefresh(interactor);
+        getch();
+        wrefresh(main_window);
+        refresh();
+        getch();
+    #endif
+
+
     printf("Please choice a device:\n");
     int c;
     scanf("%d", &c);
@@ -46,14 +63,23 @@ int main(){
     setTime();
     pcap_t *device = openDevice(devices->name);
     struct pcap_pkthdr pkthdr;
-    for(int i=1;i<=10;i++){
+    NList packets;
+    init(&packets);
+    for(int i=1;i<=100;i++){
         u_char *packet = capturePacket(device, &pkthdr, "");
+        add(&packets, i, &pkthdr, packet);
         packetProcess(&pkthdr, packet, i);
         printf("----------------------------------------------------------\n");
-        printf("%d\n",i);
     }
+    savePacket(device, &packets);
     pcap_close(device);
     setTime();
     showInfo();
+
+    #ifdef WIN
+    endwin();
+    #endif
+
+    //show(&packets);
     return 0;
 }
