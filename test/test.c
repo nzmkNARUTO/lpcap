@@ -8,7 +8,7 @@
 #define ENTER 10
 #define ESCAPE 27
 
-void init_curses()
+void initCurses()
 {
         initscr();
         start_color();
@@ -98,7 +98,7 @@ int main()
     int key;
     WINDOW *menubar,*messagebar;
 
-    init_curses();
+    initCurses();
 
     bkgd(COLOR_PAIR(1));
     menubar=subwin(stdscr,1,80,0,0);

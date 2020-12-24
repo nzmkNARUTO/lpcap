@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <pcap.h>
 #include <ncurses.h>
 #include <termios.h>
@@ -13,6 +14,7 @@
 #include "capture.h"
 #include "analysis.h"
 #include "statistic.h"
+#include "util.h"
 
 #define ENTER 10
 #define ESCAPE 27
@@ -23,7 +25,7 @@
 int main(){
     setlocale(LC_ALL,"");
     #ifdef WIN
-    init_curses();
+    initCurses();
     #endif
 
     pcap_if_t *devices = getDevices();
@@ -40,7 +42,12 @@ int main(){
 
     int x,y;
     getmaxyx(stdscr, y, x);
-    int c = scroll_devices(draw_menu(y/2-device_count/2, x/2-15, device_count, devices), device_count);
+    WINDOW **items = drawMenu(y/2-device_count/2, x/2-15, device_count, devices);
+    int c = scrollDevices(items, device_count);
+    //getch();
+    deleteMenu(items, device_count);
+    touchwin(stdscr);
+    refresh();
     getch();
     for(; c>0; c--)
         devices = devices->next;
@@ -62,17 +69,17 @@ int main(){
     savePacket(device, &packets, "./temp.pcap");
     pcap_close(device);
     setTime();
-    showInfo();
 
     #ifdef WIN
     endwin();
     #endif
 
+    showInfo();
     //show(&packets);
     return 0;
 }
 
-void init_curses(){
+void initCurses(){
     initscr();
     box(stdscr, ACS_VLINE, ACS_HLINE);
     int x,y;
@@ -91,7 +98,7 @@ void init_curses(){
     getch();
 }
 
-int scroll_devices(WINDOW **devices, int count){
+int scrollDevices(WINDOW **devices, int count){
     int key;
     int selected = 0;
     while(1){
@@ -118,17 +125,16 @@ int scroll_devices(WINDOW **devices, int count){
     }
 }
 
-WINDOW **draw_menu(int start_row, int start_col, int count, pcap_if_t *devices){
-    int i;
+WINDOW **drawMenu(int start_row, int start_col, int count, pcap_if_t *devices){
     WINDOW **items;
     items = (WINDOW **)malloc(sizeof(WINDOW *)*(count+1));
-    items[0]=newwin(count+1, 30, start_row, start_col);
+    items[0]=newwin(count+2, 30, start_row, start_col);
     wbkgd(items[0], COLOR_PAIR(5));
     box(items[0], ACS_VLINE, ACS_HLINE);
     for(int i=1; i<=count; i++){
         items[i] = subwin(items[0], 1, 28, start_row+i, start_col+1);
     }
-    for(int i=1; i<count; i++){
+    for(int i=1; i<=count; i++){
         wprintw(items[i], "[%d]%s", i, devices->name);
         devices=devices->next;
     }
@@ -136,3 +142,13 @@ WINDOW **draw_menu(int start_row, int start_col, int count, pcap_if_t *devices){
     wrefresh(items[0]);
     return items;
 }
+
+void deleteMenu(WINDOW **items, int count){
+    for(int i=0; i<count; i++){
+        //werase(items[i]);
+        delwin(items[i]);
+    }
+    free(items);
+}
+
+WINDOW **drawPacket(int count, pNode packet)
