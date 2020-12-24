@@ -46,7 +46,7 @@ u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr, char* filter){
     u_char *packet;
     packet = pcap_next(device, pkthdr);
     u_char *output = (u_char*)malloc(pkthdr->len);
-    printf("ok %d\n", pkthdr->caplen);
+    printf("ok %d\n", pkthdr->caplen);//TODO：添加过滤器后报错
     memcpy(output, packet, pkthdr->len);
 
     if (!packet)
