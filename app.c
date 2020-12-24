@@ -4,6 +4,8 @@
 #include <termios.h>
 #include <unistd.h>
 #include <time.h>
+#include <string.h>
+#include <locale.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 
@@ -12,32 +14,18 @@
 #include "analysis.h"
 #include "statistic.h"
 
+#define ENTER 10
+#define ESCAPE 27
+#define TAB 9
+
 #define WIN
 
 int main(){
+    setlocale(LC_ALL,"");
     #ifdef WIN
-    struct winsize size;//get windows size
-    ioctl(STDIN_FILENO,TIOCGWINSZ,&size);
-    initscr();
-    box(stdscr, ACS_VLINE,ACS_HLINE);
-    refresh();
-    WINDOW* main_window;
-    main_window = newwin(size.ws_row-2, size.ws_col-2, 1, 1);
-    box(main_window, ACS_VLINE, ACS_HLINE);
-    wrefresh(main_window);
-    WINDOW *welcome;
-    welcome = derwin(main_window, 1, 24, size.ws_row/2, size.ws_col/2-12);
-    mvwprintw(welcome, 0, 0, "WELCOME TO mySNIFFER!!!");
-    wrefresh(welcome);
-    getch();
-    werase(welcome);
-    delwin(welcome);
-    wrefresh(main_window);
-    
+    init_curses();
     #endif
 
-    /*
-    */
     pcap_if_t *devices = getDevices();
     pcap_if_t *p = devices;
     int device_count = 0;
@@ -48,34 +36,12 @@ int main(){
         p = p->next;
         device_count++;
     }
+    p = devices;
 
-    #ifdef WIN
-        WINDOW* interactor;
-        interactor = derwin(main_window, device_count+3, 30, 1, 1);
-        box(interactor, ACS_VLINE, ACS_HLINE);
-        p = devices;
-        mvwprintw(interactor, 1, 1, "Please choose an interface:");
-        for(int i = 0; p; i++){
-            mvwprintw(interactor, i+2, 1, "[%d]%s", i, p->name);
-            p=p->next;
-        }
-        wrefresh(interactor);
-        int c = 0;
-        c = getch()-'0';
-        werase(interactor);
-        delwin(interactor);
-        touchwin(main_window);
-        wrefresh(main_window);
-        refresh();
-        //getch();
-    #endif
-
-    /*
-    printf("Please choice a device:\n");
-    int c;
-    scanf("%d", &c);
-    printf("----------------------------------------------------------\n");
-    */
+    int x,y;
+    getmaxyx(stdscr, y, x);
+    int c = scroll_devices(draw_menu(y/2-device_count/2, x/2-15, device_count, devices), device_count);
+    getch();
     for(; c>0; c--)
         devices = devices->next;
     setTime();
@@ -104,4 +70,69 @@ int main(){
 
     //show(&packets);
     return 0;
+}
+
+void init_curses(){
+    initscr();
+    box(stdscr, ACS_VLINE, ACS_HLINE);
+    int x,y;
+    getmaxyx(stdscr, y, x);
+    mvwprintw(stdscr, y/2, x/2-12, "WELCOME TO mySNIFFER!!!");
+    wrefresh(stdscr);
+    start_color();
+    init_pair(1, COLOR_WHITE, COLOR_BLACK);
+    init_pair(2, COLOR_BLACK, COLOR_WHITE);
+    init_pair(3, COLOR_GREEN, COLOR_RED);
+    init_pair(4, COLOR_WHITE, COLOR_BLUE);
+    init_pair(5, COLOR_BLUE, COLOR_WHITE);
+    curs_set(0);
+    noecho();
+    keypad(stdscr, TRUE);
+    getch();
+}
+
+int scroll_devices(WINDOW **devices, int count){
+    int key;
+    int selected = 0;
+    while(1){
+        key=getch();
+        switch(key){
+            case KEY_DOWN:
+            case KEY_UP:
+                wbkgd(devices[selected+1], COLOR_PAIR(5));
+                wnoutrefresh(devices[selected+1]);
+                if(key == KEY_DOWN){
+                    selected = (selected+1) % count;
+                }else{
+                    selected = (selected+count-1) % count;
+                }
+                wbkgd(devices[selected+1], COLOR_PAIR(4));
+                wnoutrefresh(devices[selected+1]);
+                doupdate();
+                break;
+            case ESCAPE:
+                return -1;
+            case ENTER:
+                return selected;
+        }
+    }
+}
+
+WINDOW **draw_menu(int start_row, int start_col, int count, pcap_if_t *devices){
+    int i;
+    WINDOW **items;
+    items = (WINDOW **)malloc(sizeof(WINDOW *)*(count+1));
+    items[0]=newwin(count+1, 30, start_row, start_col);
+    wbkgd(items[0], COLOR_PAIR(5));
+    box(items[0], ACS_VLINE, ACS_HLINE);
+    for(int i=1; i<=count; i++){
+        items[i] = subwin(items[0], 1, 28, start_row+i, start_col+1);
+    }
+    for(int i=1; i<count; i++){
+        wprintw(items[i], "[%d]%s", i, devices->name);
+        devices=devices->next;
+    }
+    wbkgd(items[1], COLOR_PAIR(4));
+    wrefresh(items[0]);
+    return items;
 }
