@@ -25,7 +25,15 @@ int main(){
     main_window = newwin(size.ws_row-2, size.ws_col-2, 1, 1);
     box(main_window, ACS_VLINE, ACS_HLINE);
     wrefresh(main_window);
-    refresh();
+    WINDOW *welcome;
+    welcome = derwin(main_window, 1, 24, size.ws_row/2, size.ws_col/2-12);
+    mvwprintw(welcome, 0, 0, "WELCOME TO mySNIFFER!!!");
+    wrefresh(welcome);
+    getch();
+    werase(welcome);
+    delwin(welcome);
+    wrefresh(main_window);
+    
     #endif
 
     /*
@@ -52,7 +60,7 @@ int main(){
             p=p->next;
         }
         wrefresh(interactor);
-        int c;
+        int c = 0;
         c = getch()-'0';
         werase(interactor);
         delwin(interactor);

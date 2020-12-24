@@ -1,4 +1,5 @@
 #include <pcap.h>
+#include <termio.h>
 
 typedef struct Node {
     int id;
@@ -22,3 +23,5 @@ void show(NList *n);
  * @param string the log string
  */
 void log(char* string);
+
+int getach();//TODO:测试这玩意管不管用

@@ -48,12 +48,8 @@ u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr, char* filter){
     if (!packet)
     {
         perror("did not capture a packet!\n");
-        // u_char *output = (u_char*)malloc(sizeof(int));
-        // memcpy(output, NULL, sizeof(int));
-        // return output;
         return 0;
     }
-    //printf("ok %d\n", pkthdr->len);//TODO：添加过滤器后报错
     u_char *output = (u_char*)malloc(pkthdr->len);
     memcpy(output, packet, pkthdr->len);
 
