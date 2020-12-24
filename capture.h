@@ -22,4 +22,4 @@ pcap_t* openDevice(pcap_if_t *device_name);
 
 pcap_t *openDeviceOffline(char *file);
 
-void savePacket(pcap_t *device, NList* n);
+void savePacket(pcap_t *device, NList *n, char* file);

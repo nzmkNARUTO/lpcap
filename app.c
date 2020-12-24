@@ -12,7 +12,7 @@
 #include "analysis.h"
 #include "statistic.h"
 
-//#define WIN
+#define WIN
 
 int main(){
     #ifdef WIN
@@ -27,31 +27,39 @@ int main(){
     wrefresh(main_window);
     refresh();
     #endif
+
     /*
+    */
     pcap_if_t *devices = getDevices();
     pcap_if_t *p = devices;
     int device_count = 0;
     for(int i = 0; p; i++){
+    #ifndef WIN
         printf("[%d] %s\n", i, p->name);
+    #endif
         p = p->next;
         device_count++;
     }
-    */
 
     #ifdef WIN
         WINDOW* interactor;
-        interactor = derwin(main_window, device_count+2, 30, 1, 1);
+        interactor = derwin(main_window, device_count+3, 30, 1, 1);
         box(interactor, ACS_VLINE, ACS_HLINE);
         p = devices;
+        mvwprintw(interactor, 1, 1, "Please choose an interface:");
         for(int i = 0; p; i++){
-            mvwprintw(interactor, i+1, 1, "[%d]%s", i, p->name);
+            mvwprintw(interactor, i+2, 1, "[%d]%s", i, p->name);
             p=p->next;
         }
         wrefresh(interactor);
-        getch();
+        int c;
+        c = getch()-'0';
+        werase(interactor);
+        delwin(interactor);
+        touchwin(main_window);
         wrefresh(main_window);
         refresh();
-        getch();
+        //getch();
     #endif
 
     /*
@@ -59,23 +67,25 @@ int main(){
     int c;
     scanf("%d", &c);
     printf("----------------------------------------------------------\n");
+    */
     for(; c>0; c--)
         devices = devices->next;
-    */
     setTime();
-    //pcap_t *device = openDevice(devices->name);
-    pcap_t *device = openDeviceOffline("temp.pcap");
+    pcap_t *device = openDevice(devices->name);
+    //pcap_t *device = openDeviceOffline("temp.pcap");
     struct pcap_pkthdr pkthdr;
     NList packets;
     init(&packets);
-    for(int i=1;i<=100;i++){
+    for(int i=1;i<=10;i++){
         u_char *packet = capturePacket(device, &pkthdr, "tcp");
-        printf("%d\n",i);
-        //add(&packets, i, &pkthdr, packet);
+        if(packet == 0)
+            break;
+        //printf("%d\n",i);
+        add(&packets, i, &pkthdr, packet);
         //packetProcess(&pkthdr, packet, i);
         //printf("----------------------------------------------------------\n");
     }
-    //savePacket(device, &packets);
+    savePacket(device, &packets, "./temp.pcap");
     pcap_close(device);
     setTime();
     showInfo();

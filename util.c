@@ -23,7 +23,7 @@ void add(NList *n, int id, struct pcap_pkthdr *pkthdr, u_char *packet){
     new_node->id = id;
     memcpy(&new_node->pkthdr, pkthdr, sizeof(struct pcap_pkthdr));
     memcpy(new_node->packet, packet, sizeof(u_char)*pkthdr->caplen);
-    printf("%d\n", new_node->id);
+    //printf("%d\n", new_node->id);
     if(n->_pHead == NULL)
         n->_pHead = new_node;
     else{

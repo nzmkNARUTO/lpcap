@@ -45,21 +45,24 @@ u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr, char* filter){
 
     u_char *packet;
     packet = pcap_next(device, pkthdr);
-    u_char *output = (u_char*)malloc(pkthdr->len);
-    printf("ok %d\n", pkthdr->caplen);//TODO：添加过滤器后报错
-    memcpy(output, packet, pkthdr->len);
-
     if (!packet)
     {
         perror("did not capture a packet!\n");
-        exit(1);
+        // u_char *output = (u_char*)malloc(sizeof(int));
+        // memcpy(output, NULL, sizeof(int));
+        // return output;
+        return 0;
     }
+    //printf("ok %d\n", pkthdr->len);//TODO：添加过滤器后报错
+    u_char *output = (u_char*)malloc(pkthdr->len);
+    memcpy(output, packet, pkthdr->len);
+
 
     return output;
 }
 
-void savePacket(pcap_t *device, NList *n){
-    pcap_dumper_t *out = pcap_dump_open_append(device, "./temp.pcap");
+void savePacket(pcap_t *device, NList *n, char* file){
+    pcap_dumper_t *out = pcap_dump_open_append(device, file);
     if(!out) {
         printf("Error on opening output file\n");
         exit(1);
