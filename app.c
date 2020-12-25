@@ -7,6 +7,7 @@
 #include <time.h>
 #include <string.h>
 #include <locale.h>
+#include <pthread.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 
@@ -19,62 +20,76 @@
 #define ESCAPE 27
 #define TAB 9
 
-#define WIN
 
 int main(){
     setlocale(LC_ALL,"");
-    #ifdef WIN
     initCurses();
-    #endif
-
-    pcap_if_t *devices = getDevices();
-    pcap_if_t *p = devices;
-    int device_count = 0;
-    for(int i = 0; p; i++){
-    #ifndef WIN
-        printf("[%d] %s\n", i, p->name);
-    #endif
-        p = p->next;
-        device_count++;
-    }
-    p = devices;
-
-    int x,y;
-    getmaxyx(stdscr, y, x);
-    WINDOW **items = drawDevices(y/2-device_count/2, x/2-15, device_count, devices);
-    int c = scrollDevices(items, device_count);
-    //getch();
-    deleteDevices(items, device_count);
-    touchwin(stdscr);
-    refresh();
-    getch();
-    for(; c>0; c--)
-        devices = devices->next;
-    setTime();
-    pcap_t *device = openDevice(devices->name);
-    //pcap_t *device = openDeviceOffline("temp.pcap");
     struct pcap_pkthdr pkthdr;
     NList packets;
+    pcap_t *device = NULL;
     init(&packets);
-    for(int i=1;i<=10;i++){
-        u_char *packet = capturePacket(device, &pkthdr, "");
-        if(packet == 0)
-            break;
-        //printf("%d\n",i);
-        add(&packets, i, &pkthdr, packet);
-        //packetProcess(&pkthdr, packet, i);
-        //printf("----------------------------------------------------------\n");
+
+    drawMenuBar();
+    while(1){
+        int key;
+        key = getch();
+        if(key == KEY_F(1)){
+            WINDOW **menu = drawMenu();
+            key = scrollMenu(menu, 5);
+            deleteMenus(menu, 5);
+            if(key == 4){
+                endwin();
+                return 0;
+            }else if(key == 0){
+                pcap_if_t *devices = getDevices();
+                pcap_if_t *p = devices;
+                int device_count = 0;
+                for(int i = 0; p; i++){
+                    p = p->next;
+                    device_count++;
+                }
+                p = devices;
+                int x,y;
+                getmaxyx(stdscr, y, x);
+                WINDOW **device_menu = drawDevices(y/2-device_count/2, x/2-15, device_count, devices);
+                key = scrollMenu(device_menu, device_count);
+                deleteMenus(device_menu, device_count);
+                for(; key>0; key--)
+                    devices = devices->next;
+                setTime();
+                device = openDevice(devices->name);
+                for(int i=1;i<=10;i++){
+                u_char *packet = capturePacket(device, &pkthdr, "");
+                if(packet == 0)
+                    break;
+                add(&packets, i, &pkthdr, packet);
+                //packetProcess(&pkthdr, packet, i);
+        }
+            }else if(key == 1){
+
+            }else if(key == 2){
+
+            }else if(key == 3){
+
+            }else{
+                continue;
+            }
+        }else{
+            continue;
+        }
+
+        
+        //pcap_t *device = openDeviceOffline("temp.pcap");
+        
+        
+        savePacket(device, &packets, "./temp.pcap");
+        pcap_close(device);
+        setTime();
+        endwin();
+
+        //showInfo();
+        //show(&packets);
     }
-    savePacket(device, &packets, "./temp.pcap");
-    pcap_close(device);
-    setTime();
-
-    #ifdef WIN
-    endwin();
-    #endif
-
-    showInfo();
-    //show(&packets);
     return 0;
 }
 
@@ -91,13 +106,15 @@ void initCurses(){
     init_pair(3, COLOR_GREEN, COLOR_RED);
     init_pair(4, COLOR_WHITE, COLOR_BLUE);
     init_pair(5, COLOR_BLUE, COLOR_WHITE);
+    init_pair(6, COLOR_RED, COLOR_WHITE);
+    bkgd(COLOR_PAIR(1));
     curs_set(0);
     noecho();
     keypad(stdscr, TRUE);
     getch();
 }
 
-int scrollDevices(WINDOW **devices, int count){
+int scrollMenu(WINDOW **devices, int count){
     int key;
     int selected = 0;
     while(1){
@@ -142,11 +159,50 @@ WINDOW **drawDevices(int start_row, int start_col, int count, pcap_if_t *devices
     return items;
 }
 
-void deleteDevices(WINDOW **items, int count){
+void deleteMenus(WINDOW **items, int count){
     for(int i=0; i<count; i++){
         //werase(items[i]);
         delwin(items[i]);
     }
     free(items);
+    touchwin(stdscr);
+    refresh();
 }
+
+WINDOW **drawMenu(){
+    WINDOW **items;
+    items = (WINDOW **)malloc(sizeof(WINDOW *)*6);
+    int x,y;
+    getmaxyx(stdscr, y, x);
+    items[0] = newwin(7, 25, 1, 1);
+    wbkgd(items[0], COLOR_PAIR(2));
+    box(items[0], ACS_VLINE, ACS_HLINE);
+    items[1] = subwin(items[0], 1, 20, 2, 2);
+    wprintw(items[1], "Open device");
+    items[2] = subwin(items[0], 1, 20, 3, 2);
+    wprintw(items[2], "Open file");
+    items[3] = subwin(items[0], 1, 20, 4, 2);
+    wprintw(items[3], "Set filter");
+    items[4] = subwin(items[0], 1, 20, 5, 2);
+    wprintw(items[4], "Save as");
+    items[5] = subwin(items[0], 1, 20, 6, 2);
+    wprintw(items[5], "Exit");
+    wbkgd(items[1], COLOR_PAIR(1));
+    wrefresh(items[0]);
+    return items;
+}
+
+void drawMenuBar(){
+    WINDOW *menu_bar;
+    int x, y;
+    getmaxyx(stdscr, y, x);
+    menu_bar = subwin(stdscr, 1, x, 0, 0);
+    wbkgd(menu_bar, COLOR_PAIR(5));
+    waddstr(menu_bar, "Menu");
+    wattron(menu_bar, COLOR_PAIR(6));
+    waddstr(menu_bar, "(F1)");
+    wrefresh(menu_bar);
+}
+
+
 
