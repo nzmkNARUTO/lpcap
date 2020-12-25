@@ -14,7 +14,6 @@
 #include "capture.h"
 #include "analysis.h"
 #include "statistic.h"
-#include "util.h"
 
 #define ENTER 10
 #define ESCAPE 27
@@ -42,10 +41,10 @@ int main(){
 
     int x,y;
     getmaxyx(stdscr, y, x);
-    WINDOW **items = drawMenu(y/2-device_count/2, x/2-15, device_count, devices);
+    WINDOW **items = drawDevices(y/2-device_count/2, x/2-15, device_count, devices);
     int c = scrollDevices(items, device_count);
     //getch();
-    deleteMenu(items, device_count);
+    deleteDevices(items, device_count);
     touchwin(stdscr);
     refresh();
     getch();
@@ -58,7 +57,7 @@ int main(){
     NList packets;
     init(&packets);
     for(int i=1;i<=10;i++){
-        u_char *packet = capturePacket(device, &pkthdr, "tcp");
+        u_char *packet = capturePacket(device, &pkthdr, "");
         if(packet == 0)
             break;
         //printf("%d\n",i);
@@ -125,7 +124,7 @@ int scrollDevices(WINDOW **devices, int count){
     }
 }
 
-WINDOW **drawMenu(int start_row, int start_col, int count, pcap_if_t *devices){
+WINDOW **drawDevices(int start_row, int start_col, int count, pcap_if_t *devices){
     WINDOW **items;
     items = (WINDOW **)malloc(sizeof(WINDOW *)*(count+1));
     items[0]=newwin(count+2, 30, start_row, start_col);
@@ -143,7 +142,7 @@ WINDOW **drawMenu(int start_row, int start_col, int count, pcap_if_t *devices){
     return items;
 }
 
-void deleteMenu(WINDOW **items, int count){
+void deleteDevices(WINDOW **items, int count){
     for(int i=0; i<count; i++){
         //werase(items[i]);
         delwin(items[i]);
@@ -151,4 +150,3 @@ void deleteMenu(WINDOW **items, int count){
     free(items);
 }
 
-WINDOW **drawPacket(int count, pNode packet)

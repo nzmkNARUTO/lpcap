@@ -1,3 +1,4 @@
+#pragma once
 #define MAXSIZE 65535
 #include "util.h"
 

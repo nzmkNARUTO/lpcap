@@ -1,3 +1,5 @@
+#pragma once
+
 /**
  * @brief use functions to process the packet
  * 
