@@ -7,7 +7,7 @@
 
 void log(char* string){
     FILE* f;
-    f = fopen("log.txt","a");
+    f = fopen("log.txt","w");
     fprintf(f,string);
     fclose(f);
 }

@@ -1,5 +1,5 @@
 app:app.c app.h util capture analysis statistic
-	@gcc -o sniffer app.c util.o capture.o analysis.o statistic.o -lncursesw -lpcap
+	@gcc -o sniffer app.c util.o capture.o analysis.o statistic.o -lncursesw -lpcap -lpthread
 capture:capture.c capture.h
 	@gcc -c capture.c -o capture.o
 analysis:analysis.c analysis.h

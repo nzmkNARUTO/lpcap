@@ -28,6 +28,11 @@ int main(){
     NList packets;
     pcap_t *device = NULL;
     init(&packets);
+    struct args args;
+    args.device = NULL;
+    args.pkthdr = &pkthdr;
+    args.packets = &packets;
+    pthread_t thread;
 
     drawMenuBar();
     while(1){
@@ -43,28 +48,30 @@ int main(){
             }else if(key == 0){
                 pcap_if_t *devices = getDevices();
                 pcap_if_t *p = devices;
+
                 int device_count = 0;
                 for(int i = 0; p; i++){
                     p = p->next;
                     device_count++;
                 }
-                p = devices;
+
                 int x,y;
                 getmaxyx(stdscr, y, x);
                 WINDOW **device_menu = drawDevices(y/2-device_count/2, x/2-15, device_count, devices);
                 key = scrollMenu(device_menu, device_count);
                 deleteMenus(device_menu, device_count);
+
                 for(; key>0; key--)
                     devices = devices->next;
+
                 setTime();
                 device = openDevice(devices->name);
-                for(int i=1;i<=10;i++){
-                u_char *packet = capturePacket(device, &pkthdr, "");
-                if(packet == 0)
-                    break;
-                add(&packets, i, &pkthdr, packet);
+                int ret = pthread_create(&thread, NULL, capturePacketThread, &args);
+                if(ret != 0){
+                    log("Create thread error\n");
+                    exit(1);
+                }
                 //packetProcess(&pkthdr, packet, i);
-        }
             }else if(key == 1){
 
             }else if(key == 2){
@@ -78,10 +85,10 @@ int main(){
             continue;
         }
 
-        
+
         //pcap_t *device = openDeviceOffline("temp.pcap");
-        
-        
+
+
         savePacket(device, &packets, "./temp.pcap");
         pcap_close(device);
         setTime();
@@ -91,6 +98,18 @@ int main(){
         //show(&packets);
     }
     return 0;
+}
+
+void *capturePacketThread(void *arg){
+    struct args *args = (struct args *)arg;
+    for(int i=0;;i++)
+    {
+        u_char *packet = capturePacket(args->device, args->pkthdr, "");
+        log("inside\n");
+        if(packet == 0)
+            break;
+        add(args->packets, i, args->pkthdr, packet);
+    }
 }
 
 void initCurses(){

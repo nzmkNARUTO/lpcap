@@ -45,6 +45,7 @@ u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr, char* filter){
 
     u_char *packet;
     packet = pcap_next(device, pkthdr);
+    log("inside caputer\n");
     if (!packet)
     {
         perror("did not capture a packet!\n");
