@@ -38,14 +38,15 @@ pcap_t *openDeviceOffline(char *file){
     return device;
 }
 
-u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr, char* filter){
+void setFilter(pcap_t *device, char *filter){
     struct bpf_program bpf;
     pcap_compile(device, &bpf, filter, 1, 0);
     pcap_setfilter(device, &bpf);
+}
 
+u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr){
     u_char *packet;
     packet = pcap_next(device, pkthdr);
-    log("inside caputer\n");
     if (!packet)
     {
         perror("did not capture a packet!\n");

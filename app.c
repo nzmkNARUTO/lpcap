@@ -20,25 +20,27 @@
 #define ESCAPE 27
 #define TAB 9
 
+struct args args;
 
 int main(){
+    int ppid = getpid();
     setlocale(LC_ALL,"");
-    initCurses();
+    /*
     struct pcap_pkthdr pkthdr;
     NList packets;
     pcap_t *device = NULL;
-    init(&packets);
-    struct args args;
+    */
+    init(&args.packets);
     args.device = NULL;
-    args.pkthdr = &pkthdr;
-    args.packets = &packets;
     pthread_t thread;
 
-    drawMenuBar();
     while(1){
+        initCurses();
+        drawMenuBar();
         int key;
         key = getch();
         if(key == KEY_F(1)){
+            log("F1\n");
             WINDOW **menu = drawMenu();
             key = scrollMenu(menu, 5);
             deleteMenus(menu, 5);
@@ -63,21 +65,41 @@ int main(){
 
                 for(; key>0; key--)
                     devices = devices->next;
-
+                args.device = openDevice(devices->name);
+                int pid = fork();
+                if(pid == -1){
+                    log("Creat sub process failed\n");
+                }
+                if(pid > 0){
+                    continue;
+                }
                 setTime();
-                device = openDevice(devices->name);
-                int ret = pthread_create(&thread, NULL, capturePacketThread, &args);
-                if(ret != 0){
-                    log("Create thread error\n");
-                    exit(1);
+                for(int i=0;i<100;i++)
+                {
+                    u_char *packet = capturePacket(args.device, &args.pkthdr);
+                    //log("inside\n");
+                    if(packet == 0){
+                        log("packet is 0\n");
+                        break;
+                    }
+                    add(&args.packets, i, &args.pkthdr, packet);
+                }
+                pcap_close(args.device);
+                setTime();
+                log("finish\n");
+                printf("fork size%d\n", getSize(&args.packets));
+                if(pid == 0){
+                    exit(0);
                 }
                 //packetProcess(&pkthdr, packet, i);
             }else if(key == 1){
-
+                pcap_t *device = openDeviceOffline("temp.pcap");
             }else if(key == 2){
-
+                setFilter(args.device, "tcp");
             }else if(key == 3){
-
+                log("3\n");
+                printf("savesize%d\n", getSize(&args.packets));
+                savePacket(args.device, &args.packets, "./temp.pcap");
             }else{
                 continue;
             }
@@ -86,12 +108,9 @@ int main(){
         }
 
 
-        //pcap_t *device = openDeviceOffline("temp.pcap");
 
 
-        savePacket(device, &packets, "./temp.pcap");
-        pcap_close(device);
-        setTime();
+        //pcap_close(args.device);
         endwin();
 
         //showInfo();
@@ -100,20 +119,27 @@ int main(){
     return 0;
 }
 
+/*
 void *capturePacketThread(void *arg){
     struct args *args = (struct args *)arg;
+    log(args->device);
     for(int i=0;;i++)
     {
-        u_char *packet = capturePacket(args->device, args->pkthdr, "");
+        u_char *packet = capturePacket(device, &args->pkthdr, "");
         log("inside\n");
-        if(packet == 0)
+        if(packet == 0){
+            log("packet is 0\n");
             break;
-        add(args->packets, i, args->pkthdr, packet);
+        }
+        add(&args->packets, i, &args->pkthdr, packet);
     }
+    pcap_close(device);
 }
+*/
 
 void initCurses(){
     initscr();
+    erase();
     box(stdscr, ACS_VLINE, ACS_HLINE);
     int x,y;
     getmaxyx(stdscr, y, x);
@@ -130,7 +156,7 @@ void initCurses(){
     curs_set(0);
     noecho();
     keypad(stdscr, TRUE);
-    getch();
+    //getch();
 }
 
 int scrollMenu(WINDOW **devices, int count){

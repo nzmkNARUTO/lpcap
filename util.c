@@ -7,10 +7,11 @@
 
 void log(char* string){
     FILE* f;
-    f = fopen("log.txt","w");
+    f = fopen("log.txt","a");
     fprintf(f,string);
     fclose(f);
 }
+
 
 void init(NList *n){
     assert(n);
@@ -42,6 +43,18 @@ pNode get(NList *n, int id){
         temp = temp->next;
     }
     return temp;
+}
+
+int getSize(NList *n){
+    assert(n);
+    int count = 0;
+    pNode temp = n->_pHead;
+    while (temp)
+    {
+        temp=temp->next;
+        count++;
+    }
+    return count;
 }
 
 void show(NList *n){

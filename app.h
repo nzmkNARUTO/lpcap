@@ -3,9 +3,9 @@
 
 struct args
 {
-    pcap_t *device;
-    NList *packets;
-    struct pcap_pkthdr *pkthdr;
+    pcap_if_t *device;
+    NList packets;
+    struct pcap_pkthdr pkthdr;
 };
 
 void *capturePacketThread(void *arg);
