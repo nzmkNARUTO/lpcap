@@ -151,4 +151,4 @@ void deleteMenu(WINDOW **items, int count){
     free(items);
 }
 
-WINDOW **drawPacket(int count, pNode packet)
+//WINDOW **drawPacket(int count, pNode packet);
