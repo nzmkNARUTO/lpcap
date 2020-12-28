@@ -26,4 +26,4 @@ void show(NList *n);
  */
 void log(char* string);
 
-int getach();//TODO:测试这玩意管不管用
+int getach();

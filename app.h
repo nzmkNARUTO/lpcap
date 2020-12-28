@@ -3,7 +3,8 @@
 
 struct args
 {
-    pcap_if_t *device;
+    pcap_t *device;
+    pcap_if_t *devices;
     NList packets;
     struct pcap_pkthdr pkthdr;
 };

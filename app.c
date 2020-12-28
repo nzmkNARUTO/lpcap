@@ -8,6 +8,7 @@
 #include <string.h>
 #include <locale.h>
 #include <pthread.h>
+#include <signal.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 
@@ -23,13 +24,8 @@
 struct args args;
 
 int main(){
-    int ppid = getpid();
+    pid_t pid = 0;
     setlocale(LC_ALL,"");
-    /*
-    struct pcap_pkthdr pkthdr;
-    NList packets;
-    pcap_t *device = NULL;
-    */
     init(&args.packets);
     args.device = NULL;
     pthread_t thread;
@@ -45,11 +41,10 @@ int main(){
             key = scrollMenu(menu, 5);
             deleteMenus(menu, 5);
             if(key == 4){
-                endwin();
-                return 0;
+                break;
             }else if(key == 0){
-                pcap_if_t *devices = getDevices();
-                pcap_if_t *p = devices;
+                args.devices = getDevices();
+                pcap_if_t *p = args.devices;
 
                 int device_count = 0;
                 for(int i = 0; p; i++){
@@ -59,83 +54,70 @@ int main(){
 
                 int x,y;
                 getmaxyx(stdscr, y, x);
-                WINDOW **device_menu = drawDevices(y/2-device_count/2, x/2-15, device_count, devices);
+                WINDOW **device_menu = drawDevices(y/2-device_count/2, x/2-15, device_count, args.devices);
                 key = scrollMenu(device_menu, device_count);
                 deleteMenus(device_menu, device_count);
-
-                for(; key>0; key--)
-                    devices = devices->next;
-                args.device = openDevice(devices->name);
-                int pid = fork();
-                if(pid == -1){
-                    log("Creat sub process failed\n");
-                }
-                if(pid > 0){
+                if(key == -1)
                     continue;
-                }
-                setTime();
-                for(int i=0;i<100;i++)
-                {
-                    u_char *packet = capturePacket(args.device, &args.pkthdr);
-                    //log("inside\n");
-                    if(packet == 0){
-                        log("packet is 0\n");
-                        break;
-                    }
-                    add(&args.packets, i, &args.pkthdr, packet);
-                }
-                pcap_close(args.device);
-                setTime();
-                log("finish\n");
-                printf("fork size%d\n", getSize(&args.packets));
-                if(pid == 0){
-                    exit(0);
-                }
-                //packetProcess(&pkthdr, packet, i);
+                for(; key>0; key--)
+                    args.device = args.devices->next;
             }else if(key == 1){
                 pcap_t *device = openDeviceOffline("temp.pcap");
             }else if(key == 2){
                 setFilter(args.device, "tcp");
             }else if(key == 3){
                 log("3\n");
-                printf("savesize%d\n", getSize(&args.packets));
                 savePacket(args.device, &args.packets, "./temp.pcap");
             }else{
                 continue;
+            }
+        }else if(key == KEY_F(2)){
+            log("F2\n");
+            pid = fork();
+            if(pid == -1){
+                log("Creat sub process failed\n");
+            }
+            if(pid > 0){
+                continue;
+            }
+            log("Start\n");
+            setTime();
+            args.device = openDevice(args.devices->name);
+            for(int i=0;;i++)
+            {
+                u_char *packet = capturePacket(args.device, &args.pkthdr);
+                log("inside\n");
+                if(packet == 0){
+                    log("packet is 0\n");
+                    break;
+                }
+                add(&args.packets, i, &args.pkthdr, packet);
+                //packetProcess(&pkthdr, packet, i);
+            }
+            pcap_close(args.device);
+            setTime();
+            log("finish\n");
+            if(pid == 0){
+                exit(0);
+            }
+        }else if(key == KEY_F(3)){
+            log("F3\n");
+            if(pid > 0){
+                log("kill\n");
+                kill(pid, SIGKILL);
+            }else{
+                log("can not kill self\n");
             }
         }else{
             continue;
         }
 
-
-
-
-        //pcap_close(args.device);
-        endwin();
-
         //showInfo();
         //show(&packets);
     }
+    endwin();
     return 0;
 }
-
-/*
-void *capturePacketThread(void *arg){
-    struct args *args = (struct args *)arg;
-    log(args->device);
-    for(int i=0;;i++)
-    {
-        u_char *packet = capturePacket(device, &args->pkthdr, "");
-        log("inside\n");
-        if(packet == 0){
-            log("packet is 0\n");
-            break;
-        }
-        add(&args->packets, i, &args->pkthdr, packet);
-    }
-    pcap_close(device);
-}
-*/
 
 void initCurses(){
     initscr();
@@ -246,6 +228,17 @@ void drawMenuBar(){
     waddstr(menu_bar, "Menu");
     wattron(menu_bar, COLOR_PAIR(6));
     waddstr(menu_bar, "(F1)");
+    wattroff(menu_bar, COLOR_PAIR(6));
+    wmove(menu_bar, 0, 20);
+    waddstr(menu_bar, "Start");
+    wattron(menu_bar, COLOR_PAIR(6));
+    waddstr(menu_bar, "(F2)");
+    wattroff(menu_bar, COLOR_PAIR(6));
+    wmove(menu_bar, 0, 40);
+    waddstr(menu_bar, "Stop");
+    wattron(menu_bar, COLOR_PAIR(6));
+    waddstr(menu_bar, "(F3)");
+    wattroff(menu_bar, COLOR_PAIR(6));
     wrefresh(menu_bar);
 }
 
