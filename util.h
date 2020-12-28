@@ -1,3 +1,4 @@
+#pragma once
 #include <pcap.h>
 #include <termio.h>
 
@@ -15,6 +16,7 @@ typedef struct NodeList{
 void init(NList *n);
 void add(NList *n, int id, struct pcap_pkthdr *pkthdr, u_char *packet);
 pNode get(NList *n, int id);
+int getSize(NList *n);
 void show(NList *n);
 
 /**

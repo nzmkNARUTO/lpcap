@@ -1,3 +1,4 @@
+#pragma once
 #define MAXSIZE 65535
 #include "util.h"
 
@@ -16,7 +17,9 @@ pcap_if_t* getDevices();
  * @param filter filter string
  * @return u_char* packet connent
  */
-u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr, char* filter);
+u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr);
+
+void setFilter(pcap_t *device, char *filter);
 
 pcap_t* openDevice(pcap_if_t *device_name);
 

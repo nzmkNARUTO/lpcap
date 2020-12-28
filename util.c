@@ -12,6 +12,7 @@ void log(char* string){
     fclose(f);
 }
 
+
 void init(NList *n){
     assert(n);
     n->_pHead = NULL;
@@ -42,6 +43,18 @@ pNode get(NList *n, int id){
         temp = temp->next;
     }
     return temp;
+}
+
+int getSize(NList *n){
+    assert(n);
+    int count = 0;
+    pNode temp = n->_pHead;
+    while (temp)
+    {
+        temp=temp->next;
+        count++;
+    }
+    return count;
 }
 
 void show(NList *n){
