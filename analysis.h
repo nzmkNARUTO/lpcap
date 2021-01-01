@@ -7,7 +7,7 @@
  * @param packet packet content
  * @param count packet number
  */
-void packetProcess(struct pcap_pkthdr* pkthdr, u_char* packet, int count);
+void packetProcess(struct pcap_pkthdr* pkthdr, u_char* packet, int count, WINDOW *packet_window);
 
 /**
  * @brief change mac address to char array
@@ -23,7 +23,7 @@ void macNtoa(u_char *macaddr, char* mac_string);
  * @param packet packet content
  * @return u_short ethernet protocol type
  */
-u_short printEthernet(u_char* packet);
+u_short printEthernet(u_char* packet, WINDOW *packet_window, FILE *f);
 
 /**
  * @brief print ip protocol information

@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <ncurses.h>
+
+#include "util.h"
 
 static time_t start;
 static time_t finish;
@@ -42,21 +45,23 @@ void newPacket(int length, int type){
     }
 }
 
-void showInfo(){
+void showInfo(WINDOW *statistic_window){
     char time[64];
     strftime(time, sizeof(time), "%Y-%m-%d %H:%M:%S", localtime(&start));
-    printf("Start at: %s\n", time);
+    wprintw(statistic_window, "Start at: %s\n", time);
     strftime(time, sizeof(time), "%Y-%m-%d %H:%M:%S", localtime(&finish));
-    printf("Finish at: %s\n", time);
-    printf("Total packet: %d\n", packet_count);
-    printf("Total size: %.0lf bytes\n", packet_length);
-    printf("Speed: %.0lf bytes/s\n", packet_length/(finish-start));
-    printf("IP packet: %d\n", ip_packet);
-    printf("IP packet size %.0lf bytes\n", ip_length);
-    printf("ICMP packet: %d\n", icmp_packet);
-    printf("ICMP packet size: %.0lf bytes\n", icmp_length);
-    printf("Unknow packet: %d\n", unknow_packet);
-    printf("Unknow packet size: %.0lf bytes\n", unknow_length);
+    wprintw(statistic_window, "Finish at: %s\n", time);
+    wprintw(statistic_window, "Total packet: %d\n", packet_count);
+    wprintw(statistic_window, "Total size: %.0lf bytes\n", packet_length);
+    wprintw(statistic_window, "Speed: %.0lf bytes/s\n", packet_length/(finish-start));
+    wprintw(statistic_window, "IP packet: %d\n", ip_packet);
+    wprintw(statistic_window, "IP packet size %.0lf bytes\n", ip_length);
+    wprintw(statistic_window, "ICMP packet: %d\n", icmp_packet);
+    wprintw(statistic_window, "ICMP packet size: %.0lf bytes\n", icmp_length);
+    wprintw(statistic_window, "Unknow packet: %d\n", unknow_packet);
+    wprintw(statistic_window, "Unknow packet size: %.0lf bytes\n", unknow_length);
+    //log("show info\n");
+    wrefresh(statistic_window);
 }
 
 

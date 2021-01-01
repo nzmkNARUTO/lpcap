@@ -24,6 +24,6 @@ void show(NList *n);
  * print to the screen
  * @param string the log string
  */
-void log(char* string);
+void logStatus(char* string);
 
 int getach();

@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #include "app.h"
 #include "capture.h"
@@ -24,15 +25,22 @@
 struct args args;
 
 int main(){
-    pid_t pid = 0;
     setlocale(LC_ALL,"");
     init(&args.packets);
     args.device = NULL;
+    args.pid = 0;
     pthread_t thread;
-
+    initCurses();
+    int x,y;
+    getmaxyx(stdscr, y, x);
+    mvwprintw(stdscr, y/2, x/2-12, "WELCOME TO mySNIFFER!!!");
+    getch();
+    initCurses();
+    drawMenuBar();
+    WINDOW *packet_window = initPacketWindow();
+    WINDOW *statistic_window = initStatisticWindow();
+    //WINDOW *dump_window = initDumpWindow();
     while(1){
-        initCurses();
-        drawMenuBar();
         int key;
         key = getch();
         if(key == KEY_F(1)){
@@ -62,70 +70,91 @@ int main(){
                 for(; key>0; key--)
                     args.device = args.devices->next;
             }else if(key == 1){
-                pcap_t *device = openDeviceOffline("temp.pcap");
+                args.device = openDeviceOffline("temp.pcap");
             }else if(key == 2){
                 setFilter(args.device, "tcp");
             }else if(key == 3){
                 log("3\n");
-                savePacket(args.device, &args.packets, "./temp.pcap");
+                int p = vfork();
+                if(p == -1){
+                    log("Save subprocess failed\n");
+                }
+                if(p > 0){
+                    continue;
+                }
+                log("Save as test.pcap\n");
+                if(execlp("mv","mv", "./temp.pcap","./test.pcap",NULL) == -1){
+                    log("Execlp error\n");
+                }
             }else{
                 continue;
             }
         }else if(key == KEY_F(2)){
             log("F2\n");
-            pid = fork();
-            if(pid == -1){
+            args.pid = fork();
+            if(args.pid == -1){
                 log("Creat sub process failed\n");
             }
-            if(pid > 0){
+            if(args.pid > 0){
+                waitpid(-1, args.pid, WNOHANG);
                 continue;
             }
             log("Start\n");
+            signal(SIGINT, sigProcess);
             setTime();
             args.device = openDevice(args.devices->name);
             for(int i=0;;i++)
             {
                 u_char *packet = capturePacket(args.device, &args.pkthdr);
-                log("inside\n");
+                //log("inside\n");
                 if(packet == 0){
                     log("packet is 0\n");
                     break;
                 }
                 add(&args.packets, i, &args.pkthdr, packet);
-                //packetProcess(&pkthdr, packet, i);
+                packetProcess(&args.pkthdr, packet, i, packet_window);
+                setTime();
+                statistic_window = initStatisticWindow();
+                showInfo(statistic_window);
             }
+            /*
             pcap_close(args.device);
             setTime();
+            savePacket(args.device, &args.packets, "./temp.pcap");
             log("finish\n");
-            if(pid == 0){
+            if(args.pid == 0){
                 exit(0);
             }
+            */
         }else if(key == KEY_F(3)){
             log("F3\n");
-            if(pid > 0){
+            if(args.pid > 0){
                 log("kill\n");
-                kill(pid, SIGKILL);
+                kill(args.pid, SIGINT);
             }else{
                 log("can not kill self\n");
             }
         }else{
             continue;
         }
-
-        //showInfo();
-        //show(&packets);
     }
     endwin();
     return 0;
+}
+
+
+void sigProcess(){
+    pcap_close(args.device);
+    setTime();
+    savePacket(args.device, &args.packets, "./temp.pcap");
+    log("finish\n");
+    exit(0);
 }
 
 void initCurses(){
     initscr();
     erase();
     box(stdscr, ACS_VLINE, ACS_HLINE);
-    int x,y;
-    getmaxyx(stdscr, y, x);
-    mvwprintw(stdscr, y/2, x/2-12, "WELCOME TO mySNIFFER!!!");
     wrefresh(stdscr);
     start_color();
     init_pair(1, COLOR_WHITE, COLOR_BLACK);
@@ -139,6 +168,48 @@ void initCurses(){
     noecho();
     keypad(stdscr, TRUE);
     //getch();
+}
+
+WINDOW *initPacketWindow(){
+    int x,y;
+    getmaxyx(stdscr, y, x);
+    WINDOW *packet_window_box = subwin(stdscr, y-2, x/2-1, 1, x/2);
+    box(packet_window_box, ACS_VLINE, ACS_HLINE);
+    wbkgd(packet_window_box ,COLOR_PAIR(1));
+    getmaxyx(packet_window_box, y, x);
+    WINDOW *packet_window = derwin(packet_window_box, y-2, x-2, 1, 1);
+    scroll(packet_window);
+    scrollok(packet_window, TRUE);
+    wsetscrreg(packet_window, 0, y-2);
+    wrefresh(packet_window);
+    wrefresh(packet_window_box);
+    log("init packet window\n");
+    return packet_window;
+}
+
+WINDOW *initStatisticWindow(){
+    int x,y;
+    getmaxyx(stdscr,y,x);
+    //printf("x:%d,y:%d\n", x, y);
+    WINDOW *statistic_window_box = subwin(stdscr, y-2, x/2, 1, 1);
+    box(statistic_window_box, ACS_VLINE, ACS_HLINE);
+    wbkgd(statistic_window_box, COLOR_PAIR(1));
+    getmaxyx(statistic_window_box, y, x);
+    WINDOW *statistic_window = derwin(statistic_window_box, y-2, x-2, 1, 1);
+    wrefresh(statistic_window);
+    wrefresh(statistic_window_box);
+    log("init statistic window\n");
+    return statistic_window;
+}
+
+WINDOW *initDumpWindow(){
+    int x,y;
+    getmaxyx(stdscr, y, x);
+    WINDOW *dump_window = subwin(stdscr, y/2, x/2-1, y/2, x/2);
+    box(dump_window, ACS_VLINE, ACS_HLINE);
+    wbkgd(dump_window, COLOR_PAIR(1));
+    wrefresh(dump_window);
+    return dump_window;
 }
 
 int scrollMenu(WINDOW **devices, int count){
@@ -183,6 +254,7 @@ WINDOW **drawDevices(int start_row, int start_col, int count, pcap_if_t *devices
     }
     wbkgd(items[1], COLOR_PAIR(4));
     wrefresh(items[0]);
+    refresh();
     return items;
 }
 

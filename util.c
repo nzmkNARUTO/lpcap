@@ -5,7 +5,7 @@
 
 #include "util.h"
 
-void log(char* string){
+void logStatus(char* string){
     FILE* f;
     f = fopen("log.txt","a");
     fprintf(f,string);

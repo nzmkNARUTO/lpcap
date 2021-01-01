@@ -2,4 +2,4 @@
 
 void setTime();
 void newPacket(int length, int type);
-void showInfo();
+void showInfo(WINDOW *statistic_window);

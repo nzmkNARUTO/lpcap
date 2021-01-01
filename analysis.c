@@ -3,6 +3,7 @@
 #include <string.h>
 #include <pcap.h>
 #include <time.h>
+#include <ncurses.h>
 #include <net/ethernet.h>
 #include <net/if_arp.h>
 #include <netinet/ether.h>
@@ -15,70 +16,83 @@
 
 #include "analysis.h"
 #include "statistic.h"
+#include "util.h"
 
-void packetProcess(struct pcap_pkthdr* pkthdr, u_char* packet, int count){
-
-    printf("count:%d\n",count);
-    printf("Packet len:%d, Bytes:%d, Received time:%s", pkthdr->len, pkthdr->caplen, ctime((const time_t *)&pkthdr->ts.tv_sec));
-    u_short type = printEthernet(packet);
+void packetProcess(struct pcap_pkthdr* pkthdr, u_char* packet, int count, WINDOW *packet_window){
+    FILE *f = fopen("a","a");
+    wattron(packet_window, COLOR_PAIR(2));
+    wprintw(packet_window, "Count:%d\n", count);
+    fprintf(f, "Count:%d\n", count);
+    wattroff(packet_window, COLOR_PAIR(2));
+    wprintw(packet_window, "Packet len:%d, Bytes:%d\nReceived time:%s", pkthdr->len, pkthdr->caplen, ctime((const time_t *)&pkthdr->ts.tv_sec));
+    fprintf(f, "Packet len:%d, Bytes:%d\nReceived time:%s", pkthdr->len, pkthdr->caplen, ctime((const time_t *)&pkthdr->ts.tv_sec));
+    //log("process packet\n");
+    u_short type = printEthernet(packet, packet_window, f);
     switch (type)
     {
     case ETHERTYPE_IP:
-        printf("Ethernet protocol is IP protocol\n");
+        wprintw(packet_window, "Ethernet protocol is IP protocol\n");
         uint8_t ip_type = printIP(packet);
         switch(ip_type){
             case 1:
-                printf("Transport protocol is ICMP protocol\n");
+                wprintw(packet_window, "Transport protocol is ICMP protocol\n");
                 newPacket(pkthdr->caplen, 2);
-                printICMP(packet, pkthdr->len);
+                //printICMP(packet, pkthdr->len);
                 break;
             case 6:
-                printf("Transport protocol is TCP protocol\n");
+                wprintw(packet_window, "Transport protocol is TCP protocol\n");
                 newPacket(pkthdr->caplen, 1);
-                printTCP(packet, pkthdr->len);
+                //printTCP(packet, pkthdr->len);
                 break;
             case 17:
-                printf("Transport protocol is UDP protocol\n");
+                wprintw(packet_window, "Transport protocol is UDP protocol\n");
                 newPacket(pkthdr->caplen, 1);
-                printUDP(packet, pkthdr->len);
+                //printUDP(packet, pkthdr->len);
                 break;
             default:
                 newPacket(pkthdr->caplen, 1);
-                printf("Known protocol\n");
+                wprintw(packet_window, "Known protocol\n");
                 break;
         }
         break;
     case ETHERTYPE_ARP:
-        printf("Ethernet protocol is ARP protocol\n");
+        wprintw(packet_window, "Ethernet protocol is ARP protocol\n");
         newPacket(pkthdr->caplen, 3);
-        printARP(packet, pkthdr->len);
+        //printARP(packet, pkthdr->len);
         break;
     case ETHERTYPE_REVARP:
-        printf("Ethernet protocol is RARP protocol\n");
+        wprintw(packet_window, "Ethernet protocol is RARP protocol\n");
         newPacket(pkthdr->caplen, 3);
-        printARP(packet, pkthdr->len);
+        //printARP(packet, pkthdr->len);
         break;
     default:
-        printf("Unkown protocol\n");
+        wprintw(packet_window, "Unkown protocol\n");
         newPacket(pkthdr->caplen, 3);
         break;
     }
+    wrefresh(packet_window);
 }
 
-u_short printEthernet(u_char* packet){
+u_short printEthernet(u_char* packet, WINDOW *packet_window, FILE *f){
     struct ether_header *ethhdr;
     u_short ether_type;
     char mac[18];
     ethhdr = (struct ether_header *)packet;
-    printf("Source mac address:");
+    wprintw(packet_window, "Source mac address:");
+    fprintf(f, "Source mac address:");
     macNtoa(ethhdr->ether_shost, mac);
-    printf("%s\n",mac);
-    printf("Destination mac address:");
+    wprintw(packet_window, "%s\n",mac);
+    fprintf(f, "%s\n",mac);
+    wprintw(packet_window, "Destination mac address:");
+    fprintf(f, "Destination mac address:");
     macNtoa(ethhdr->ether_dhost, mac);
-    printf("%s\n",mac);
+    wprintw(packet_window, "%s\n",mac);
+    fprintf(f, "%s\n",mac);
     ether_type = ntohs(ethhdr->ether_type);
-    printf("Ethernet type:");
-    printf("%04X\n",ether_type);
+    wprintw(packet_window, "Ethernet type:");
+    fprintf(f, "Ethernet type:");
+    wprintw(packet_window, "%04X\n",ether_type);
+    fprintf(f, "%04X\n",ether_type);
     return ether_type;
 }
 
@@ -87,17 +101,17 @@ uint8_t printIP(u_char *packet){
     char ip[16];
     char tos[18];
     iphdr = (struct ip*)(packet+sizeof(struct ether_header));
-    printf("Source ip address:");
+    //printf("Source ip address:");
     ipFtoa((u_char *)&(iphdr->ip_src), ip);
-    printf("%s\n",ip);
-    printf("Destination ip address:");
+    //printf("%s\n",ip);
+    //printf("Destination ip address:");
     ipFtoa((u_char *)&(iphdr->ip_dst), ip);
-    printf("%s\n",ip);
-    printf("TOS:");
+    //printf("%s\n",ip);
+    //printf("TOS:");
     ipTtos(iphdr->ip_tos, tos);
-    printf("%s\n",tos);
-    printf("Transport protocol:");
-    printf("%d\n", iphdr->ip_p);
+    //printf("%s\n",tos);
+    //printf("Transport protocol:");
+    //printf("%d\n", iphdr->ip_p);
     return iphdr->ip_p;
 }
 
