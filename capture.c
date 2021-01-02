@@ -14,7 +14,7 @@ pcap_if_t* getDevices(){
     int n;
     n = pcap_findalldevs(&devices, errbuf);
     if(n == -1)
-        log("Get devices error!");
+        logStatus("Get devices error!");
     return devices;
 }
 

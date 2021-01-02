@@ -60,7 +60,7 @@ void showInfo(WINDOW *statistic_window){
     wprintw(statistic_window, "ICMP packet size: %.0lf bytes\n", icmp_length);
     wprintw(statistic_window, "Unknow packet: %d\n", unknow_packet);
     wprintw(statistic_window, "Unknow packet size: %.0lf bytes\n", unknow_length);
-    //log("show info\n");
+    //logStatus("show info\n");
     wrefresh(statistic_window);
 }
 
