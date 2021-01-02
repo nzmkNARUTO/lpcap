@@ -11,7 +11,8 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
-#include <sys/wait.h>
+#include <sys/msg.h>
+#include <errno.h>
 
 #include "app.h"
 #include "capture.h"
@@ -23,28 +24,35 @@
 #define TAB 9
 
 struct args args;
+struct packets packets;
 
 int main(){
     setlocale(LC_ALL,"");
     init(&args.packets);
     args.device = NULL;
     args.pid = 0;
+    args.msgid = -1;
     pthread_t thread;
     initCurses();
     int x,y;
     getmaxyx(stdscr, y, x);
     mvwprintw(stdscr, y/2, x/2-12, "WELCOME TO mySNIFFER!!!");
     getch();
+    args.msgid = msgget((key_t)1234, 0666|IPC_CREAT);
+    if(args.msgid == -1){
+        perror("msgget failed!\n");
+        exit(-1);
+    }
     initCurses();
     drawMenuBar();
-    WINDOW *packet_window = initPacketWindow();
-    WINDOW *statistic_window = initStatisticWindow();
+    args.packet_window = initPacketWindow();
+    args.statistic_window = initStatisticWindow();
     //WINDOW *dump_window = initDumpWindow();
     while(1){
         int key;
         key = getch();
         if(key == KEY_F(1)){
-            log("F1\n");
+            logStatus("F1\n");
             WINDOW **menu = drawMenu();
             key = scrollMenu(menu, 5);
             deleteMenus(menu, 5);
@@ -74,81 +82,121 @@ int main(){
             }else if(key == 2){
                 setFilter(args.device, "tcp");
             }else if(key == 3){
-                log("3\n");
+                logStatus("3\n");
                 int p = vfork();
                 if(p == -1){
-                    log("Save subprocess failed\n");
+                    logStatus("Save subprocess failed\n");
                 }
                 if(p > 0){
                     continue;
                 }
-                log("Save as test.pcap\n");
+                logStatus("Save as test.pcap\n");
                 if(execlp("mv","mv", "./temp.pcap","./test.pcap",NULL) == -1){
-                    log("Execlp error\n");
+                    logStatus("Execlp error\n");
                 }
             }else{
                 continue;
             }
         }else if(key == KEY_F(2)){
-            log("F2\n");
+            logStatus("F2\n");
+            signal(SIGCHLD, SIG_IGN);
+            args.device = openDevice(args.devices->name);
             args.pid = fork();
             if(args.pid == -1){
-                log("Creat sub process failed\n");
+                logStatus("Creat sub process failed\n");
+                pcap_close(args.device);
             }
             if(args.pid > 0){
-                waitpid(-1, args.pid, WNOHANG);
+                signal(SIGUSR1, msgProcess);
+                setTime();
                 continue;
             }
-            log("Start\n");
+            logStatus("Start\n");
             signal(SIGINT, sigProcess);
-            setTime();
-            args.device = openDevice(args.devices->name);
+            struct msg message;
+            message.msg_type = 1;
             for(int i=0;;i++)
             {
-                u_char *packet = capturePacket(args.device, &args.pkthdr);
-                //log("inside\n");
+                memset(&message.packet, 0, sizeof(message.packet));
+                u_char *packet = capturePacket(args.device, &packets.pkthdr);
+                //logStatus("inside\n");
                 if(packet == 0){
-                    log("packet is 0\n");
+                    logStatus("packet is 0\n");
                     break;
                 }
-                add(&args.packets, i, &args.pkthdr, packet);
-                packetProcess(&args.pkthdr, packet, i, packet_window);
-                setTime();
-                statistic_window = initStatisticWindow();
-                showInfo(statistic_window);
+                message.packet.id = i;
+                memcpy(&message.packet.pkthdr, &packets.pkthdr, sizeof(struct pcap_pkthdr));
+                memcpy(message.packet.packet, packet, packets.pkthdr.caplen);
+                if (msgsnd(args.msgid, (void *)&message, sizeof(struct packets), IPC_NOWAIT) == -1){
+                    logStatus("msgsnd failed\n");
+                    //printf("%d\n", sizeof(struct packets));
+                    //perror("msgsnd failed\n");
+                }else{
+                    logStatus("msgsnd success\n");
+                }
+                kill(getppid(), SIGUSR1);
+                logStatus("kill sigusr1\n");
+                //add(&args.packets, i, &args.pkthdr, packet);
+                //packetProcess(&args.pkthdr, packet, i, packet_window);
+                //setTime();
+                //statistic_window = initStatisticWindow();
+                //showInfo(statistic_window);
             }
             /*
             pcap_close(args.device);
             setTime();
             savePacket(args.device, &args.packets, "./temp.pcap");
-            log("finish\n");
+            logStatus("finish\n");
             if(args.pid == 0){
                 exit(0);
             }
             */
         }else if(key == KEY_F(3)){
-            log("F3\n");
+            logStatus("F3\n");
             if(args.pid > 0){
-                log("kill\n");
+                logStatus("kill\n");
                 kill(args.pid, SIGINT);
             }else{
-                log("can not kill self\n");
+                logStatus("can not kill self\n");
             }
+            //printf("%d\n", getSize(&args.packets));
+            pcap_close(args.device);
+            savePacket(args.device, &args.packets, "./temp.pcap");
         }else{
             continue;
         }
     }
     endwin();
+    if(msgctl(args.msgid, IPC_RMID, 0) == -1){
+        perror("msgctl(IPC_RMID) failed!\nresource has not been release!\nplease try \"ipcs -q\" and \"ipcrm -q\" mannually\n");
+        exit(-1);
+    }
     return 0;
 }
 
 
 void sigProcess(){
-    pcap_close(args.device);
-    setTime();
-    savePacket(args.device, &args.packets, "./temp.pcap");
-    log("finish\n");
+
+    logStatus("finish\n");
     exit(0);
+}
+
+void msgProcess(){
+    logStatus("get sigusr1\n");
+    struct msg message;
+    if(msgrcv(args.msgid, (void *)&message, sizeof(struct packets), 1, 0) == -1){
+        logStatus("msgrcv failed\n");
+        //kill(args.pid, SIGINT);
+    }else{
+        logStatus("msgrcv success\n");
+    }
+    add(&args.packets, message.packet.id, &message.packet.pkthdr, message.packet.packet);
+    packetProcess(&message.packet.pkthdr, message.packet.packet, message.packet.id, args.packet_window);
+    setTime();
+    args.statistic_window = initStatisticWindow();
+    showInfo(args.statistic_window);
+    logStatus("new signal\n");
+    signal(SIGUSR1, msgProcess);
 }
 
 void initCurses(){
@@ -173,7 +221,7 @@ void initCurses(){
 WINDOW *initPacketWindow(){
     int x,y;
     getmaxyx(stdscr, y, x);
-    WINDOW *packet_window_box = subwin(stdscr, y-2, x/2-1, 1, x/2);
+    WINDOW *packet_window_box = subwin(stdscr, y-2, x/3*2-1, 1, x/3);
     box(packet_window_box, ACS_VLINE, ACS_HLINE);
     wbkgd(packet_window_box ,COLOR_PAIR(1));
     getmaxyx(packet_window_box, y, x);
@@ -183,7 +231,7 @@ WINDOW *initPacketWindow(){
     wsetscrreg(packet_window, 0, y-2);
     wrefresh(packet_window);
     wrefresh(packet_window_box);
-    log("init packet window\n");
+    logStatus("init packet window\n");
     return packet_window;
 }
 
@@ -191,14 +239,14 @@ WINDOW *initStatisticWindow(){
     int x,y;
     getmaxyx(stdscr,y,x);
     //printf("x:%d,y:%d\n", x, y);
-    WINDOW *statistic_window_box = subwin(stdscr, y-2, x/2, 1, 1);
+    WINDOW *statistic_window_box = subwin(stdscr, y-2, x/3, 1, 1);
     box(statistic_window_box, ACS_VLINE, ACS_HLINE);
     wbkgd(statistic_window_box, COLOR_PAIR(1));
     getmaxyx(statistic_window_box, y, x);
     WINDOW *statistic_window = derwin(statistic_window_box, y-2, x-2, 1, 1);
     wrefresh(statistic_window);
     wrefresh(statistic_window_box);
-    log("init statistic window\n");
+    logStatus("init statistic window\n");
     return statistic_window;
 }
 
