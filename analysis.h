@@ -23,7 +23,7 @@ void macNtoa(u_char *macaddr, char* mac_string);
  * @param packet packet content
  * @return u_short ethernet protocol type
  */
-u_short printEthernet(u_char* packet, WINDOW *packet_window, FILE *f);
+u_short printEthernet(u_char* packet, WINDOW *packet_window);
 
 /**
  * @brief print ip protocol information
@@ -31,7 +31,7 @@ u_short printEthernet(u_char* packet, WINDOW *packet_window, FILE *f);
  * @param packet packet content
  * @return uint8_t ip protocol type
  */
-uint8_t printIP(u_char *packet);
+uint8_t printIP(u_char *packet, WINDOW *packet_window);
 
 /**
  * @brief print icmp content
@@ -39,7 +39,7 @@ uint8_t printIP(u_char *packet);
  * @param packet packet content
  * @param len packet length
  */
-void printICMP(u_char *packet, int len);
+void printICMP(u_char *packet, int len, WINDOW *packet_window);
 
 /**
  * @brief print tcp content
@@ -47,7 +47,11 @@ void printICMP(u_char *packet, int len);
  * @param packet packet content
  * @param len packet length
  */
-void printTCP(u_char *packet, int len);
+void printTCP(u_char *packet, int len, WINDOW *packet_window);
+
+void printUDP(u_char *packet, int len, WINDOW *packet_window);
+
+void printARP(u_char *packet, int len, WINDOW *packet_window);
 
 /**
  * @brief change ip address to char array
@@ -71,4 +75,4 @@ void ipTtos(uint8_t tos, char* tos_string);
  * @param payload packet
  * @param len packet length
  */
-void dumpPacket(const u_char* payload,int len);
+void dumpPacket(const u_char* payload,int len, WINDOW *packet_window);
