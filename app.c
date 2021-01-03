@@ -57,6 +57,14 @@ int main(){
             key = scrollMenu(menu, 5);
             deleteMenus(menu, 5);
             if(key == 4){
+                if(args.pid > 0){
+                logStatus("kill\n");
+                kill(args.pid, SIGINT);
+                }else{
+                    logStatus("can not kill self\n");
+                }
+                pcap_close(args.device);
+                remove("./temp.pcap");
                 break;
             }else if(key == 0){
                 args.devices = getDevices();
@@ -76,11 +84,12 @@ int main(){
                 if(key == -1)
                     continue;
                 for(; key>0; key--)
-                    args.device = args.devices->next;
+                    args.devices = args.devices->next;
+                //args.device = openDevice(args.devices->name);
             }else if(key == 1){
-                args.device = openDeviceOffline("temp.pcap");
+                args.device = openDeviceOffline("./test.pcap");
             }else if(key == 2){
-                setFilter(args.device, "tcp");
+                setFilter(args.device, "icmp");
             }else if(key == 3){
                 logStatus("3\n");
                 int p = vfork();
@@ -100,7 +109,7 @@ int main(){
         }else if(key == KEY_F(2)){
             logStatus("F2\n");
             signal(SIGCHLD, SIG_IGN);
-            args.device = openDevice(args.devices->name);
+            args.device = openDevice(args.devices->name);//TODO:共享文件描述符的问题还未解决
             args.pid = fork();
             if(args.pid == -1){
                 logStatus("Creat sub process failed\n");
@@ -119,7 +128,6 @@ int main(){
             {
                 memset(&message.packet, 0, sizeof(message.packet));
                 u_char *packet = capturePacket(args.device, &packets.pkthdr);
-                //logStatus("inside\n");
                 if(packet == 0){
                     logStatus("packet is 0\n");
                     break;
@@ -129,28 +137,12 @@ int main(){
                 memcpy(message.packet.packet, packet, packets.pkthdr.caplen);
                 if (msgsnd(args.msgid, (void *)&message, sizeof(struct packets), IPC_NOWAIT) == -1){
                     logStatus("msgsnd failed\n");
-                    //printf("%d\n", sizeof(struct packets));
-                    //perror("msgsnd failed\n");
                 }else{
                     logStatus("msgsnd success\n");
                 }
                 kill(getppid(), SIGUSR1);
                 logStatus("kill sigusr1\n");
-                //add(&args.packets, i, &args.pkthdr, packet);
-                //packetProcess(&args.pkthdr, packet, i, packet_window);
-                //setTime();
-                //statistic_window = initStatisticWindow();
-                //showInfo(statistic_window);
             }
-            /*
-            pcap_close(args.device);
-            setTime();
-            savePacket(args.device, &args.packets, "./temp.pcap");
-            logStatus("finish\n");
-            if(args.pid == 0){
-                exit(0);
-            }
-            */
         }else if(key == KEY_F(3)){
             logStatus("F3\n");
             if(args.pid > 0){
@@ -159,7 +151,6 @@ int main(){
             }else{
                 logStatus("can not kill self\n");
             }
-            //printf("%d\n", getSize(&args.packets));
             pcap_close(args.device);
             savePacket(args.device, &args.packets, "./temp.pcap");
         }else{
@@ -250,7 +241,7 @@ WINDOW *initStatisticWindow(){
     return statistic_window;
 }
 
-WINDOW *initDumpWindow(){
+WINDOW *initDumpWindow(){//TODO:dump window还没完成
     int x,y;
     getmaxyx(stdscr, y, x);
     WINDOW *dump_window = subwin(stdscr, y/2, x/2-1, y/2, x/2);

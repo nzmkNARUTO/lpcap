@@ -25,6 +25,8 @@ pcap_t* openDevice(pcap_if_t *device_name){
         printf("Error:pcap_open_live error, %s", errbuf);
         exit(1);
     }
+    logStatus("open device:");
+    logStatus(device_name);
     return device;
 }
 
@@ -42,6 +44,8 @@ void setFilter(pcap_t *device, char *filter){
     struct bpf_program bpf;
     pcap_compile(device, &bpf, filter, 1, 0);
     pcap_setfilter(device, &bpf);
+    logStatus("set filter:");
+    logStatus(filter);
 }
 
 u_char* capturePacket(pcap_t *device, struct pcap_pkthdr *pkthdr){
