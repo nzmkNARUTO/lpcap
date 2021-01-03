@@ -12,5 +12,6 @@
         "cstdbool": "c",
         "cstdint": "c",
         "typeinfo": "c"
-    }
+    },
+    "cmake.configureOnOpen": false
 }
